@@ -12,10 +12,15 @@ import urllib.request
 URL = "http://127.0.0.1:8080/v1/systemone"
 THRESHOLD = 0.6  # ponytail: umbral fijo, calibrar con el conjunto de prueba
 
-# Cada opción lleva descripción: con etiquetas sueltas Kev convierte
-# "don't turn left" en turn_right (prob 0.42).
 ACTION_CRITERIA = {
-    # TODO(human): descripciones de cada acción, incluida la opción para negaciones
+    # Plantilla: cuándo aplica + ejemplos literales, y al final las exclusiones.
+    "turn_left": "The player tells the driver to turn left right now, even insistently "
+                 "(e.g. 'turn left', 'go left', 'left here', 'left now!', 'left, left, left!'). "
+                 "Not when the player says NOT to turn left, and not when the turn is for later ('after the cones').",
+    "turn_right": "The player tells the driver to turn right right now, even insistently "
+                  "(e.g. 'turn right', 'go right', 'right here', 'right now!', 'right, right, right!'). "
+                  "Not when the player says NOT to turn right, and not when the turn is for later ('after the cones').",
+    # TODO(human): opción de rechazo (negaciones, ambigüedad, órdenes no soportadas)
 }
 
 QUESTIONS = {
