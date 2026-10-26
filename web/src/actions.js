@@ -15,7 +15,10 @@ const ACTION_CRITERIA = {
     'The player tells the driver to turn right right now, even insistently ' +
     "(e.g. 'turn right', 'go right', 'right here', 'right now!', 'right, right, right!'). " +
     "Not when the player says NOT to turn right, and not when the turn is for later ('after the cones').",
-  // TODO(human): opción de rechazo (negaciones, ambigüedad, comentarios, órdenes no soportadas)
+  // No cambia los controles: el coche sigue como va.
+  continue:
+    'The player tells the driver not to turn, to keep going, or to do nothing, or is just talking about something else ' +
+    "(e.g. \"don't turn\", \"don't turn left\", 'keep going', 'carry on', 'do nothing', \"that's right\", 'thanks', 'nice weather').",
 }
 
 const QUESTIONS = {
