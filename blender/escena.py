@@ -73,9 +73,10 @@ def soft(o, width=None, subsurf=0):
     # Acabado de juguete: sombreado suave + bisel redondeado con normales endurecidas
     # (caras planas siguen planas, solo los bordes se redondean y pillan luz).
     o.data.shade_smooth()
-    if width:
+    if width and width >= 0.02:  # en piezas diminutas el bisel no se ve y solo suma triángulos
         b = o.modifiers.new("Bevel", "BEVEL")
-        b.width, b.segments, b.limit_method, b.harden_normals = width, 3, "ANGLE", True
+        b.width, b.limit_method, b.harden_normals = width, "ANGLE", True
+        b.segments = 3 if width >= 0.2 else 1  # presupuesto ~250k triángulos en toda la escena
     if subsurf:
         s = o.modifiers.new("Smooth", "SUBSURF")
         s.levels = s.render_levels = subsurf
@@ -103,12 +104,12 @@ def cone(name, loc, r, depth, coll, material, rot=(0, 0, 0), parent=None, r2=0.0
     return soft(o, min(0.4, 0.15 * r)) if bevel else o
 
 
-def cyl(name, loc, r, depth, coll, material, rot=(0, 0, 0), verts=24, parent=None):
+def cyl(name, loc, r, depth, coll, material, rot=(0, 0, 0), verts=24, parent=None, bevel=True):
     o = cone(name, loc, r, depth, coll, material, rot, parent, r2=r, verts=verts, bevel=False)
-    return soft(o, min(0.4, 0.25 * min(r, depth)))
+    return soft(o, min(0.4, 0.25 * min(r, depth)) if bevel else None)
 
 
-def ball(name, loc, r, coll, material, scale=(1, 1, 1), parent=None, segs=16):
+def ball(name, loc, r, coll, material, scale=(1, 1, 1), parent=None, segs=12):
     bm = bmesh.new()
     bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=segs * 5 // 8, radius=r)
     o = soft(mesh_obj(name, bm, coll, [material], loc, parent=parent))
@@ -284,14 +285,14 @@ MOUTH = [(-0.55, 0.05), (-0.38, -0.05), (-0.25, 0.08), (-0.1, -0.04), (0.05, 0.0
 def pumpkin(name, loc, r, coll, carved=False, face=0.0, parent=None, squash=0.8):
     # Calabaza con gajos; carved=True talla ojos y boca que brillan por dentro.
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, radius=r)
+    bmesh.ops.create_uvsphere(bm, u_segments=24 if carved else 16, v_segments=12 if carved else 10, radius=r)
     for v in bm.verts:
         k = 1 - 0.09 * (1 - math.cos(8 * math.atan2(v.co.y, v.co.x))) / 2
         v.co.x, v.co.y, v.co.z = v.co.x * k, v.co.y * k, v.co.z * squash
     o = soft(mesh_obj(name, bm, coll, [M["pumpkin"]], loc, (0, 0, face), parent))
     stem = name.split("__")[0] + "__stem" if "__" in name else name + "Stem"
     cone(stem, (loc[0], loc[1], loc[2] + r * squash + 0.12 * r), 0.13 * r, 0.4 * r, coll, M["stem"],
-         parent=parent, r2=0.07 * r, verts=8)
+         parent=parent, r2=0.07 * r, verts=6, bevel=False)
     if carved:
         for side in (-1, 1):
             eye = [(side * x, z) for x, z in EYE]
@@ -397,9 +398,9 @@ def dead_tree(x, y, s, coll):
 
 
 def pine(x, y, s, z0, coll):
-    cyl("PineTrunk", (x, y, z0 + 0.8 * s), 0.3 * s, 1.6 * s, coll, M["wood"], verts=8)
-    cone("PineLow", (x, y, z0 + 3.0 * s), 2.4 * s, 3.6 * s, coll, M["pine"], verts=10)
-    cone("PineHigh", (x, y, z0 + 5.2 * s), 1.7 * s, 3.0 * s, coll, M["pine"], verts=10)
+    cyl("PineTrunk", (x, y, z0 + 0.8 * s), 0.3 * s, 1.6 * s, coll, M["wood"], verts=6, bevel=False)
+    cone("PineLow", (x, y, z0 + 3.0 * s), 2.4 * s, 3.6 * s, coll, M["pine"], verts=8, bevel=False)
+    cone("PineHigh", (x, y, z0 + 5.2 * s), 1.7 * s, 3.0 * s, coll, M["pine"], verts=8, bevel=False)
 
 
 def bush(x, y, s, coll):
@@ -878,8 +879,8 @@ loft("CarBody__shell", [(2.15, 0.8, 0.42, 0.66), (1.9, 1.0, 0.32, 0.84), (1.1, 1
      cc, M["car"], parent=car)
 box("CarBody__tub", (0, -0.3, 0.86), (1.6, 1.3, 0.1), cc, M["cloth"], parent=car)
 for s in (-1, 1):
-    ball("CarBody__fender", (s * 0.97, 1.3, 0.78), 0.55, cc, M["car"], (0.35, 1.1, 0.55), parent=car)
-    ball("CarBody__fenderR", (s * 0.97, -1.3, 0.8), 0.55, cc, M["car"], (0.38, 1.15, 0.6), parent=car)
+    ball("CarBody__fender", (s * 0.97, 1.3, 0.78), 0.55, cc, M["car"], (0.35, 1.1, 0.55), parent=car, segs=16)
+    ball("CarBody__fenderR", (s * 0.97, -1.3, 0.8), 0.55, cc, M["car"], (0.38, 1.15, 0.6), parent=car, segs=16)
     box("CarBody__vent", (s * 0.35, 1.25, 0.99), (0.35, 0.6, 0.05), cc, M["tyre"], rot=(math.radians(-6), 0, 0), parent=car)
     # faros rasgados siguiendo la curva del morro y tomas en V hacia el murciélago
     box("CarBody__headlight", (s * 0.56, 2.0, 0.78), (0.55, 0.1, 0.09), cc, M["car_glow"],
@@ -911,10 +912,10 @@ drv = bpy.data.objects.new("Driver", None)
 dc.objects.link(drv)
 drv.parent = car
 drv.location = (-0.45, -0.4, 0)  # asiento izquierdo
-ball("DriverBody__bean", (0, 0, 1.38), 0.3, dc, M["cloth"], (1, 0.85, 1.3), parent=drv)
+ball("DriverBody__bean", (0, 0, 1.38), 0.3, dc, M["cloth"], (1, 0.85, 1.3), parent=drv, segs=16)
 for s in (-1, 1):
     limb("DriverBody__arm", (s * 0.27, 0.02, 1.6), (s * 0.18, 0.6, 1.4), 0.085, dc, M["cloth"], parent=drv)
-    ball("DriverBody__mitten", (s * 0.18, 0.62, 1.4), 0.11, dc, M["leather"], parent=drv)
+    ball("DriverBody__mitten", (s * 0.18, 0.62, 1.4), 0.11, dc, M["leather"], parent=drv, segs=16)
 cape("DriverBody__cape", (0, 0, 1.78), dc, parent=drv)
 prism("DriverBody__collar", [(-0.45, 0), (0.45, 0), (0.6, 0.45), (0.25, 0.2), (0, 0.35), (-0.25, 0.2), (-0.6, 0.45)],
       0.05, (0, -0.24, 1.72), dc, M["cape_red"], rot=(math.radians(-15), 0, 0), parent=drv)
