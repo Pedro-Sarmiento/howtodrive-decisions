@@ -33,24 +33,37 @@ GATE = Vector((45, 45, 0))   # la pista cruza la puerta del castillo aquí
 def wipe():
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete()
-    for coll in (bpy.data.meshes, bpy.data.materials, bpy.data.lights, bpy.data.cameras, bpy.data.curves):
+    for coll in (bpy.data.meshes, bpy.data.materials, bpy.data.lights, bpy.data.cameras,
+                 bpy.data.curves, bpy.data.images):
         for block in list(coll):
             if block.users == 0:
                 coll.remove(block)
 
 
-def mat(name, rgb, rough=0.8, emit=0.0, metal=0.0):
+def srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def hex_rgb(h):
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+
+
+def mat(name, hex_color, glow=False):
+    # Material provisional de un color de la paleta; palettize() lo sustituye al final.
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
-    m.use_nodes = True
-    bsdf = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-    bsdf.inputs["Base Color"].default_value = (*rgb, 1)
-    bsdf.inputs["Roughness"].default_value = rough
-    bsdf.inputs["Metallic"].default_value = metal
-    if emit:
-        bsdf.inputs["Emission Color"].default_value = (*rgb, 1)
-        bsdf.inputs["Emission Strength"].default_value = emit
-    m.diffuse_color = (*rgb, 1)
+    m["hex"], m["glow"] = hex_color, glow
+    m.diffuse_color = (*map(srgb_to_linear, hex_rgb(hex_color)), 1)
     return m
+
+
+def soft(o, width=None):
+    # Acabado de juguete: sombreado suave + bisel redondeado con normales endurecidas
+    # (caras planas siguen planas, solo los bordes se redondean y pillan luz).
+    o.data.shade_smooth()
+    if width:
+        b = o.modifiers.new("Bevel", "BEVEL")
+        b.width, b.segments, b.limit_method, b.harden_normals = width, 3, "ANGLE", True
+    return o
 
 
 def collection(name):
@@ -78,24 +91,83 @@ def box(name, loc, size, coll, material, rot=(0, 0, 0), parent=None):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc, rotation=rot)
     o = bpy.context.object
     o.data.transform(Matrix.Diagonal((*size, 1)))
+    soft(o, min(0.4, 0.2 * min(size)))
     return put(o, coll, material, name, parent)
 
 
 def cyl(name, loc, r, depth, coll, material, rot=(0, 0, 0), verts=24, parent=None):
     bpy.ops.mesh.primitive_cylinder_add(vertices=verts, radius=r, depth=depth, location=loc, rotation=rot)
+    soft(bpy.context.object, min(0.4, 0.25 * min(r, depth)))
     return put(bpy.context.object, coll, material, name, parent)
 
 
 def cone(name, loc, r, depth, coll, material, rot=(0, 0, 0), parent=None):
-    bpy.ops.mesh.primitive_cone_add(radius1=r, depth=depth, location=loc, rotation=rot)
+    bpy.ops.mesh.primitive_cone_add(vertices=16, radius1=r, depth=depth, location=loc, rotation=rot)
+    soft(bpy.context.object, min(0.4, 0.15 * r))
     return put(bpy.context.object, coll, material, name, parent)
 
 
 def ball(name, loc, r, coll, material, scale=(1, 1, 1), parent=None):
     bpy.ops.mesh.primitive_uv_sphere_add(radius=r, location=loc, segments=16, ring_count=10)
-    o = put(bpy.context.object, coll, material, name, parent)
+    o = put(soft(bpy.context.object), coll, material, name, parent)
     o.scale = scale
     return o
+
+
+def palettize(cell=4, cols=8):
+    # Una textura-paleta (cols x cols casillas de `cell` px) y dos materiales para toda la
+    # escena: "Palette" (mate) y "PaletteGlow" (emisivo). Cada cara apunta su UV al centro
+    # de la casilla de su color, así glTF exporta 2 materiales y un PNG diminuto.
+    colors = sorted({m["hex"] for m in bpy.data.materials if "hex" in m})
+    assert len(colors) <= cols * cols, f"paleta llena: {len(colors)} colores"
+    size = cell * cols
+    img = bpy.data.images.new("Palette", size, size)
+    px = [0.0] * (size * size * 4)
+    for k, h in enumerate(colors):
+        cx, cy = k % cols, k // cols
+        for y in range(cy * cell, (cy + 1) * cell):
+            for x in range(cx * cell, (cx + 1) * cell):
+                px[(y * size + x) * 4:(y * size + x) * 4 + 4] = (*hex_rgb(h), 1)
+    img.pixels = px
+    if HERE:
+        img.filepath_raw = os.path.join(HERE, "palette.png")
+        img.file_format = "PNG"
+        img.save()
+    uv_of = {h: ((k % cols + 0.5) / cols, (k // cols + 0.5) / cols) for k, h in enumerate(colors)}
+
+    def palette_mat(name, glow):
+        m = bpy.data.materials.new(name)
+        m.use_nodes = True
+        nt = m.node_tree
+        bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+        tex = nt.nodes.new("ShaderNodeTexImage")
+        tex.image, tex.interpolation = img, "Closest"
+        nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+        bsdf.inputs["Roughness"].default_value = 0.9
+        bsdf.inputs["Metallic"].default_value = 0.0
+        if glow:
+            nt.links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+            bsdf.inputs["Emission Strength"].default_value = 4.0
+        return m
+
+    flat, glow = palette_mat("Palette", False), palette_mat("PaletteGlow", True)
+    for o in bpy.data.objects:
+        if o.type != "MESH" or not o.data.materials:
+            continue
+        me, old = o.data, list(o.data.materials)
+        uv = me.uv_layers.active or me.uv_layers.new(name="UVMap")
+        for poly in me.polygons:
+            m = old[poly.material_index]
+            u, v = uv_of[m["hex"]]
+            for li in poly.loop_indices:
+                uv.data[li].uv = (u, v)
+            poly.material_index = 1 if m["glow"] else 0
+        me.materials.clear()
+        me.materials.append(flat)
+        me.materials.append(glow)
+    for m in list(bpy.data.materials):
+        if "hex" in m:
+            bpy.data.materials.remove(m)
 
 
 def mesh_obj(name, bm, coll, materials):
@@ -152,27 +224,28 @@ def strip(bm, pts, off_in, off_out, z=0.02, mat_of=None):
 
 # ---------- escena ----------
 wipe()
+# Paleta Halloween: pastel saturado, nunca colores puros (hex sRGB)
 M = {
-    "ground": mat("Ground", (0.04, 0.045, 0.03)),
-    "outside": mat("Outside", (0.015, 0.02, 0.025)),
-    "asphalt": mat("Asphalt", (0.05, 0.045, 0.05), rough=0.5),
-    "kerb_r": mat("KerbRed", (0.75, 0.05, 0.03)),
-    "kerb_w": mat("KerbWhite", (0.85, 0.85, 0.85)),
-    "light": mat("EdgeLight", (1.0, 0.45, 0.08), emit=6.0),
-    "stone": mat("Stone", (0.2, 0.18, 0.2)),
-    "roof": mat("Roof", (0.07, 0.05, 0.1)),
-    "window": mat("Window", (1.0, 0.55, 0.12), emit=5.0),
-    "banner": mat("Banner", (0.06, 0.03, 0.05)),
-    "pumpkin": mat("Pumpkin", (0.95, 0.38, 0.03), emit=1.5),
-    "water": mat("Water", (0.02, 0.04, 0.07), rough=0.05),
-    "wood": mat("DeadWood", (0.07, 0.05, 0.04)),
-    "leaves": mat("AutumnLeaves", (0.6, 0.18, 0.03)),
-    "car": mat("CarBody", (0.02, 0.02, 0.025), rough=0.25, metal=0.6),
-    "car_glow": mat("CarGlow", (1.0, 0.4, 0.05), emit=8.0),
-    "tyre": mat("Tyre", (0.01, 0.01, 0.01)),
-    "glass": mat("Glass", (0.05, 0.05, 0.08), rough=0.05),
-    "cloth": mat("Cloth", (0.02, 0.015, 0.02)),
-    "cape_red": mat("CapeRed", (0.45, 0.02, 0.02)),
+    "ground": mat("Ground", "#4E7A4C"),       # verde musgo
+    "outside": mat("Outside", "#26304A"),     # azul noche
+    "asphalt": mat("Asphalt", "#4B4459"),
+    "kerb_r": mat("KerbRed", "#E2553F"),
+    "kerb_w": mat("KerbWhite", "#F1ECE2"),
+    "light": mat("EdgeLight", "#FFB04A", glow=True),
+    "stone": mat("Stone", "#9089A0"),         # piedra lavanda
+    "roof": mat("Roof", "#5E4391"),           # morado
+    "window": mat("Window", "#FFC766", glow=True),
+    "banner": mat("Banner", "#3E2A5C"),
+    "pumpkin": mat("Pumpkin", "#F2862E"),     # naranja calabaza
+    "water": mat("Water", "#3D6F94"),
+    "wood": mat("DeadWood", "#6E4C3B"),
+    "leaves": mat("AutumnLeaves", "#E57A3C"),
+    "car": mat("CarBody", "#3A3548"),         # negro de juguete, no negro puro
+    "car_glow": mat("CarGlow", "#FF9640", glow=True),
+    "tyre": mat("Tyre", "#2A2733"),
+    "glass": mat("Glass", "#A9C2E3"),
+    "cloth": mat("Cloth", "#45395A"),
+    "cape_red": mat("CapeRed", "#C9413F"),
 }
 C = {k: collection(k) for k in ("Ground", "Track", "Castle", "Walls", "Garden", "Car", "Driver")}
 
@@ -248,7 +321,7 @@ box("GateGlow", (gx, gy - 3.05, 8.2), (8, 0.1, 0.6), C["Castle"], M["window"])
 box("GateLink", (gx, gy + 9, 8), (18, 8, 16), C["Castle"], M["stone"])
 
 # Foso en el hueco sur entre las dos rectas interiores
-box("Moat", (7.5, -35, -0.3), (15, 38, 0.2), C["Garden"], M["water"])
+box("Moat", (7.5, -35, 0.02), (15, 38, 0.06), C["Garden"], M["water"])
 for side, x in (("W", -1.2), ("E", 16.2)):
     box(f"MoatParapet_{side}", (x, -35, 0.5), (0.8, 38, 1.0), C["Garden"], M["stone"])
 
@@ -270,55 +343,68 @@ for k in range(30):  # calabazas sueltas fuera de la pista
     if min((Vector((x, y, 0)) - p).length for p in pts[::4]) > ROAD_W / 2 + 3:
         ball(f"Pumpkin_{k}", (x, y, 0.45), 0.6, C["Garden"], M["pumpkin"], (1, 1, 0.75))
 
-# ---------- coche (roadster negro) ----------
+# ---------- coche: roadster de juguete, corto y robusto ----------
 car = bpy.data.objects.new("Car", None)  # vacío padre: three.js mueve y gira este nodo
 C["Car"].objects.link(car)
 car.location = START
 car.rotation_euler = (0, 0, 0)  # rumbo +Y (norte)
 cc = C["Car"]
-box("CarBody", (0, 0, 0.55), (1.95, 4.5, 0.6), cc, M["car"], parent=car)
-box("CarNose", (0, 1.75, 0.8), (1.85, 1.2, 0.3), cc, M["car"], rot=(math.radians(-12), 0, 0), parent=car)
-box("CarDeck", (0, -1.5, 0.95), (1.8, 1.4, 0.25), cc, M["car"], parent=car)
-box("CarSpoiler", (0, -2.15, 1.3), (1.9, 0.35, 0.08), cc, M["car"], parent=car)
-box("CarWindshield", (0, 0.65, 1.1), (1.6, 0.08, 0.5), cc, M["glass"], rot=(math.radians(-35), 0, 0), parent=car)
+box("CarBody", (0, 0, 0.7), (2.1, 4.0, 0.8), cc, M["car"], parent=car)
+box("CarHood", (0, 1.2, 1.1), (1.95, 1.5, 0.35), cc, M["car"], rot=(math.radians(-8), 0, 0), parent=car)
+box("CarDeck", (0, -1.35, 1.15), (1.95, 1.2, 0.4), cc, M["car"], parent=car)
+box("CarSpoiler", (0, -1.85, 1.6), (2.0, 0.4, 0.12), cc, M["car"], parent=car)
 for side in (-1, 1):
-    box(f"CarSeat_{side}", (side * 0.45, -0.45, 0.95), (0.55, 0.5, 0.7), cc, M["cloth"], parent=car)
-    box(f"CarHeadlight_{side}", (side * 0.65, 2.27, 0.75), (0.45, 0.06, 0.1), cc, M["car_glow"], parent=car)
-    box(f"CarSideGlow_{side}", (side * 0.99, 0, 0.32), (0.04, 3.6, 0.05), cc, M["car_glow"], parent=car)
-    for end, y in (("F", 1.45), ("R", -1.4)):
-        cyl(f"Wheel_{end}{side}", (side * 0.92, y, 0.36), 0.36, 0.32, cc, M["tyre"],
+    box(f"CarSpoilerPost_{side}", (side * 0.7, -1.85, 1.45), (0.12, 0.2, 0.3), cc, M["car"], parent=car)
+box("CarWindshield", (0, 0.45, 1.45), (1.7, 0.1, 0.5), cc, M["glass"], rot=(math.radians(-30), 0, 0), parent=car)
+for side in (-1, 1):
+    box(f"CarSeat_{side}", (side * 0.45, -0.45, 1.25), (0.6, 0.5, 0.75), cc, M["cloth"], parent=car)
+    box(f"CarHeadlight_{side}", (side * 0.62, 2.0, 0.95), (0.5, 0.1, 0.16), cc, M["car_glow"], parent=car)
+    box(f"CarSideGlow_{side}", (side * 1.06, 0, 0.42), (0.06, 3.2, 0.08), cc, M["car_glow"], parent=car)
+    for end, y in (("F", 1.3), ("R", -1.3)):
+        cyl(f"Wheel_{end}{side}", (side * 1.0, y, 0.5), 0.5, 0.45, cc, M["tyre"],
             rot=(0, math.radians(90), 0), parent=car)
+box("CarBatEmblem", (0, 2.02, 0.65), (0.5, 0.08, 0.14), cc, M["car_glow"], parent=car)
 
-# ---------- conductora: cabeza de calabaza con sombrero de bruja ----------
+# ---------- conductora: cabeza de calabaza grande, cuerpo de judía ----------
 dc = C["Driver"]
 drv = bpy.data.objects.new("Driver", None)
 dc.objects.link(drv)
 drv.parent = car
 drv.location = (-0.45, -0.4, 0)  # asiento izquierdo
-box("DriverTorso", (0, 0, 1.45), (0.5, 0.32, 0.65), dc, M["cloth"], parent=drv)
-box("DriverCape", (0, -0.2, 1.4), (0.7, 0.08, 0.8), dc, M["cape_red"], parent=drv)
-for side in (-1, 1):
-    box(f"DriverArm_{side}", (side * 0.22, 0.35, 1.45), (0.12, 0.6, 0.12), dc, M["cloth"],
-        rot=(math.radians(-20), 0, 0), parent=drv)
-cyl("SteeringWheel", (0, 0.65, 1.35), 0.18, 0.04, dc, M["tyre"], rot=(math.radians(70), 0, 0), parent=drv)
-ball("DriverHead", (0, 0, 2.0), 0.3, dc, M["pumpkin"], (1, 1, 0.85), parent=drv)
-box("DriverFace", (0, 0.27, 2.0), (0.3, 0.05, 0.12), dc, M["window"], parent=drv)
-cyl("HatBrim", (0, 0, 2.25), 0.5, 0.03, dc, M["cloth"], parent=drv)
-cone("HatTop", (0, -0.05, 2.6), 0.25, 0.7, dc, M["cloth"], rot=(math.radians(-15), 0, 0), parent=drv)
+ball("DriverBody", (0, 0, 1.75), 0.3, dc, M["cloth"], (1, 0.8, 1.35), parent=drv)
+box("DriverCape", (0, -0.24, 1.75), (0.75, 0.1, 0.8), dc, M["cape_red"], parent=drv)
+for side in (-1, 1):  # brazos tubulares y manos sin dedos sobre el volante
+    cyl(f"DriverArm_{side}", (side * 0.2, 0.3, 1.8), 0.08, 0.55, dc, M["cloth"],
+        rot=(math.radians(-70), 0, 0), parent=drv)
+    ball(f"DriverHand_{side}", (side * 0.17, 0.58, 1.72), 0.1, dc, M["cloth"], parent=drv)
+cyl("SteeringWheel", (0, 0.62, 1.7), 0.22, 0.05, dc, M["tyre"], rot=(math.radians(65), 0, 0), parent=drv)
+ball("DriverHead", (0, 0, 2.5), 0.45, dc, M["pumpkin"], (1, 1, 0.85), parent=drv)
+cyl("DriverStem", (0, 0, 2.9), 0.06, 0.15, dc, M["wood"], verts=8, parent=drv)
+for side in (-1, 1):  # ojos triangulares y boca, luz por dentro
+    cone(f"DriverEye_{side}", (side * 0.16, 0.43, 2.6), 0.09, 0.08, dc, M["window"],
+         rot=(math.radians(-90), 0, 0), parent=drv)
+box("DriverMouth", (0, 0.42, 2.4), (0.36, 0.06, 0.08), dc, M["window"], parent=drv)
+cyl("HatBrim", (0, 0, 2.82), 0.72, 0.06, dc, M["cloth"], parent=drv)
+box("HatBand", (0, 0, 2.92), (0.6, 0.6, 0.12), dc, M["roof"], parent=drv)
+cone("HatTop", (0, -0.1, 3.35), 0.34, 1.0, dc, M["cloth"], rot=(math.radians(-18), 0, 0), parent=drv)
 
-# ---------- luz de luna, cielo y cámara de persecución ----------
-bpy.ops.object.light_add(type="SUN", rotation=(math.radians(55), 0, math.radians(200)))
-bpy.context.object.data.energy = 1.2
-bpy.context.object.data.color = (0.6, 0.65, 1.0)
+# ---------- luz: luna fría + cielo de relleno (el AO y el bloom van en three.js) ----------
+bpy.ops.object.light_add(type="SUN", rotation=(math.radians(50), 0, math.radians(200)))
+bpy.context.object.data.energy = 2.5
+bpy.context.object.data.color = (0.75, 0.8, 1.0)
+bpy.context.object.data.angle = math.radians(8)  # sombras suaves
 world = bpy.context.scene.world or bpy.data.worlds.new("World")
 bpy.context.scene.world = world
 world.use_nodes = True
 bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-bg.inputs["Color"].default_value = (0.03, 0.02, 0.07, 1)
+bg.inputs["Color"].default_value = (0.06, 0.05, 0.14, 1)
+bg.inputs["Strength"].default_value = 2.0
 
 bpy.ops.object.camera_add(location=(0, -10, 6), rotation=(math.radians(73), 0, 0))
 cam = bpy.context.object
 cam.name = "ChaseCam"
 cam.parent = car
 bpy.context.scene.camera = cam
+
+palettize()
 print("ok", len(bpy.data.objects), "objetos,", len(pts), "puntos de pista, giros:", turns)
