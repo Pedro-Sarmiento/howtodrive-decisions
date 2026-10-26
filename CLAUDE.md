@@ -18,6 +18,7 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
 
 - Banco de pruebas de Kev en `web/` (`npm run dev`, la página tiene botones small/large).
 - Kev large (4B, unos 2,7 GB): 15/15 aciertos, unos 2,2 s por decisión en WebGPU (M4). Kev small (0,8B, unos 750 MB): 7/15 y unos 365 ms. **Pendiente: elegir tamaño y bajar la latencia.**
+- Kev small con 6 decisiones (start, stop, left, right, back, continue): regla léxica de negación/diferido + puerta sí/no + elección entre 5 → 37/38 dev y 29/30 reservadas, unos 375 ms (WebGPU, M4). Una sola pregunta `choice` con `continue` daba 13/38: el modelo pequeño acierta *cuál* acción (47/47), pero no *si* hay orden.
 - Descripciones de opciones: primero cuándo aplica, con ejemplos literales, y al final las exclusiones. Umbral provisional `confidence >= 0.6`.
 - Plan detallado y criterios: `plan-juego-conduccion.md`. Lo que diga este archivo tiene prioridad sobre el plan si no coinciden.
 
