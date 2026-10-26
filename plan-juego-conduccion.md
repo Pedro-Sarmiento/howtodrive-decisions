@@ -20,7 +20,7 @@ Es una validación técnica para uso propio: una sola voz (la mía), un solo equ
 - Interpretación: al menos el 90 % de aciertos en unas 50 frases etiquetadas (texto). Ninguna negación ejecuta su acción.
 - Transcripción: unas 15 frases grabadas con mi voz, más silencio y ruido, con errores registrados por separado de los de interpretación.
 - Latencia: mediana inferior a 1,5 s y percentil 95 inferior a 3 s, de extremo a extremo en este Mac.
-- Control: completar una vuelta del circuito 2D sin controles manuales.
+- Control: completar una vuelta del circuito sin controles manuales.
 
 Si un criterio no se cumple, se documenta con sus números y se decide si ajustar o dar la validación por respondida en negativo. Ese resultado también vale.
 
@@ -31,13 +31,13 @@ Si un criterio no se cumple, se documenta con sus números y se decide si ajusta
 - Acciones: acelerar, reducir, frenar, parar, giro a izquierda o derecha, seguir recto y rechazo. Los comentarios ("thanks", "that's right") caen en rechazo.
 - whisper.cpp (`base.en` o `small.en`, según el benchmark) con VAD y prompt de vocabulario.
 - Página web mínima con push-to-talk (barra espaciadora). Muestra la transcripción, la acción, la confianza y los tiempos.
-- Simulación 2D vista desde arriba en canvas: el coche mantiene velocidad y rumbo, hay un circuito con conos y meta, colisión por distancia y reinicio.
+- Simulación con three.js y modelos low-poly hechos en Blender (vía MCP) y exportados a glTF: coche, circuito, conos y meta. Cámara de persecución o cenital. La física sigue siendo cinemática (velocidad + rumbo), con colisión por distancia y reinicio, sin motor físico.
 
 **Opcional, solo si sobra tiempo**
 - Intensidad (soft/normal/hard) y órdenes compuestas ("slow down and turn left").
 
 **Fuera**
-- Vista 3D, representación de la conductora, voz y respuestas habladas, personalidad, conversación, pausa, tráfico, otros equipos, instalación para terceros y distribución.
+- Vista desde el asiento del copiloto, representación de la conductora, voz y respuestas habladas, personalidad, conversación, pausa, tráfico, otros equipos, instalación para terceros y distribución.
 
 ## Decisiones técnicas ya tomadas
 
@@ -52,7 +52,7 @@ Si un criterio no se cumple, se documenta con sus números y se decide si ajusta
 1. **Kev en texto** *(en curso)*: completar `ACTION_CRITERIA`, convertir las frases de prueba en un conjunto etiquetado (frase → acción esperada) y medir el porcentaje de aciertos y la latencia. Medido hasta ahora: entre 100 y 400 ms por decisión.
 2. **Whisper:** benchmark de `base.en` frente a `small.en`, con y sin VAD, en un momento en que Kev no esté corriendo. Grabar las frases con mi voz y medir la transcripción.
 3. **Integración:** página con push-to-talk → `whisper-server` → Kev. Medir la latencia de extremo a extremo con los dos modelos cargados a la vez.
-4. **Simulación 2D:** coche, circuito y meta. Ajustar la velocidad y las curvas a la latencia medida e intentar la vuelta completa.
+4. **Simulación 3D:** modelar en Blender el coche, el circuito y los conos, exportarlos a glTF y montarlos en three.js. Ajustar la velocidad y las curvas a la latencia medida e intentar la vuelta completa.
 
 ## Referencias
 
