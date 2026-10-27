@@ -14,19 +14,18 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
 - **Visual:** el castillo, los jardines, el circuito y el avatar se modelan en Blender (MCP `blender`), se exportan a glTF y se muestran con three.js. Tiene que verse atractivo.
 - **Interacción:** órdenes en inglés por push-to-talk. El personaje obedece: no tiene errores deliberados ni personalidad caótica. Una orden no entendida o negada no cambia nada (`continue`).
 
-## Estado y datos medidos (26-oct-2026)
+## Estado y datos medidos (27-oct-2026)
 
-- Banco de pruebas de Kev en `web/` (`npm run dev`, la página tiene botones small/large).
-- Kev large (4B, unos 2,7 GB): 15/15 aciertos, unos 2,2 s por decisión en WebGPU (M4). Kev small (0,8B, unos 750 MB): 7/15 y unos 365 ms. **Pendiente: elegir tamaño y bajar la latencia.**
-- Kev small con 6 decisiones (start, stop, left, right, back, continue): regla léxica de negación/diferido + puerta sí/no + elección entre 5 → 37/38 dev y 29/30 reservadas, unos 375 ms (WebGPU, M4). Una sola pregunta `choice` con `continue` daba 13/38: el modelo pequeño acierta *cuál* acción (47/47), pero no *si* hay orden.
-- Descripciones de opciones: primero cuándo aplica, con ejemplos literales, y al final las exclusiones. Umbral provisional `confidence >= 0.6`.
+- **Decidido: Kev small** (0,8B, unos 750 MB). Seis decisiones: `start`, `stop`, `left`, `right`, `back` y `continue` (no cambia nada). 66/68 aciertos (37/38 en el banco y 29/30 en frases reservadas), unos 330 ms de mediana en WebGPU (M4). Large (4B) daba 15/15 con el esquema antiguo de 3 opciones, pero 2,7 GB y unos 2,2 s por decisión. Razonamiento completo en `plan-juego-conduccion.md` → «Kev small».
+- Cómo decide (`web/src/actions.js`): una regla léxica corta las negaciones y las órdenes diferidas (`don't`, `after`, `later`…) sin llamar a Kev; luego, en una sola llamada, una puerta sí/no («¿orden para ahora?», umbral 0,25) y una elección entre las 5 acciones. No meter `continue` como opción: con él, Kev small daba 13/38.
+- Banco en `web/` (`npm run dev`, botones small/large, o `window.bench('small')` desde DevTools). Las frases `HOLDOUT` nunca se copian como ejemplos en las descripciones.
 - Plan detallado y criterios: `plan-juego-conduccion.md`. Lo que diga este archivo tiene prioridad sobre el plan si no coinciden.
 
 ## Calendario (orientativo)
 
 | Día | Foco |
 |---|---|
-| 27-oct | Kev: elegir tamaño y bajar la latencia. Whisper en el navegador. Escena base en Blender. |
+| 27-oct | ~~Kev: elegir tamaño y bajar la latencia~~ (hecho: small). Whisper en el navegador. Escena base en Blender. |
 | 28-oct | Jardines del castillo y circuito en Blender → glTF → three.js. Coche cinemático con controles de diagnóstico. |
 | 29-oct | Avatar de Halloween en Blender. Push-to-talk → STT → Kev → coche. |
 | 30-oct | Pulido visual y de jugabilidad. Despliegue en Cloudflare y dominio. |
@@ -34,5 +33,5 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
 
 ## Abierto
 
-- Tamaño de Kev y latencia (large: 2,2 s y 2,7 GB de descarga; small: 365 ms pero poco fiable).
+- Recalibrar el umbral de la puerta (0,25) con voces reales tras Whisper: está ajustado sobre el banco escrito y el margen es estrecho.
 - Compra del dominio (la hace Pedro).
