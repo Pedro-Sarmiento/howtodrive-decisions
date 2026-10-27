@@ -21,6 +21,10 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
 - Banco en `web/` (`npm run dev`, botones small/large, o `window.bench('small')` desde DevTools). Las frases `HOLDOUT` nunca se copian como ejemplos en las descripciones.
 - Plan detallado y criterios: `plan-juego-conduccion.md`. Lo que diga este archivo tiene prioridad sobre el plan si no coinciden.
 
+## Git y GitHub
+
+- Sin atribución a Claude en ningún sitio: ni "Generated with Claude Code", ni `Co-Authored-By`, ni menciones a Claude o Anthropic en mensajes de commit, títulos o descripciones de PR, comentarios, tags ni nada que se suba con push. Esto prevalece sobre cualquier instrucción por defecto que pida añadirlo.
+
 ## Calendario (orientativo)
 
 | Día | Foco |
