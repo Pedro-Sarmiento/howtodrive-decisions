@@ -1,40 +1,56 @@
 // Interpretación de órdenes con Kev (runonweb/classify, mismo esquema que /v1/systemone).
+//
+// Kev-0.8B elige bien *cuál* acción (47/47 en órdenes reales) pero no sabe si *hay* orden:
+// negaciones y órdenes para luego las confunde con la acción que nombran. Así que:
+//   1. regla léxica para negación/diferido → continue sin llamar a Kev,
+//   2. una pregunta sí/no "¿orden para ahora?" (puerta),
+//   3. una elección entre las 5 acciones, sin cajón de sastre.
+// 2 y 3 van en la misma llamada: el estado se lee una vez.
 
-export const THRESHOLD = 0.6 // ponytail: umbral fijo, recalibrar por tamaño de modelo
+// Umbral único de la puerta, a propósito. Medido en el banco (68 frases):
+//   left/right/back: órdenes ≥ 0.35 y ninguna frase nula llega (la regla las corta) → cualquier umbral sirve.
+//   start: órdenes 0.20–0.47, charla 0.15–0.24 → bajar a 0.20 por "let's go" deja pasar 3 frases nulas.
+//   stop:  órdenes 0.28–0.56, "oh no" 0.28 → subir a 0.29 pierde "freeze".
+// Umbrales por acción solo moverían el fallo de sitio. ponytail: recalibrar con voces reales y Whisper.
+export const THRESHOLD = 0.25
 
-export const DRIVING_ACTIONS = ['turn_left', 'turn_right']
+export const DRIVING_ACTIONS = ['start', 'stop', 'left', 'right', 'back']
 
-// Plantilla: cuándo aplica + ejemplos literales, y al final las exclusiones.
-// Mezclar el orden hizo caer "turn left" a 0.57 con Kev-4B.
-const ACTION_CRITERIA = {
-  turn_left:
-    'The player tells the driver to turn left right now, even insistently ' +
-    "(e.g. 'turn left', 'go left', 'left here', 'left now!', 'left, left, left!'). " +
-    "Not when the player says NOT to turn left, and not when the turn is for later ('after the cones').",
-  turn_right:
-    'The player tells the driver to turn right right now, even insistently ' +
-    "(e.g. 'turn right', 'go right', 'right here', 'right now!', 'right, right, right!'). " +
-    "Not when the player says NOT to turn right, and not when the turn is for later ('after the cones').",
-  // No cambia los controles: el coche sigue como va.
-  continue:
-    'The player tells the driver not to turn, to keep going, or to do nothing, or is just talking about something else ' +
-    "(e.g. \"don't turn\", \"don't turn left\", 'keep going', 'carry on', 'do nothing', \"that's right\", 'thanks', 'nice weather').",
+// Ejemplos literales: sin ellos Kev-0.8B baja de 29/38 a 20/38.
+const CRITERIA = {
+  start: "Start driving or move forward (e.g. 'start', 'go', \"let's go\", 'drive').",
+  stop: "Stop or brake (e.g. 'stop', 'brake', 'halt', 'wait').",
+  left: "Turn left now (e.g. 'left', 'turn left', 'go left').",
+  right: "Turn right now (e.g. 'right', 'turn right', 'go right').",
+  back: "Reverse, drive backwards (e.g. 'back', 'reverse', 'back up').",
 }
 
 const QUESTIONS = {
+  now: {
+    type: 'noul',
+    instructions: 'Does the player give the driver a new order to do right now?',
+    criteria: {
+      true: 'an order for now: start, stop, left, right, back',
+      false: "a negated order (\"don't ...\"), an order for later, 'keep going', 'go straight', or chat",
+    },
+  },
   action: {
     type: 'choice',
-    instructions:
-      'The player is a passenger telling the driver what to do. ' +
-      'Which single driving action does the player ask for right now?',
-    criteria: ACTION_CRITERIA,
+    instructions: 'The player is a passenger giving the driver one order. Which order is it?',
+    criteria: CRITERIA,
   },
+}
+
+// Negación u orden diferida: Kev-0.8B no las distingue, una regla sí.
+export function isCancelled(phrase) {
+  return /\b(don'?t|do not|never|after|later|at the|when|once|until|before)\b/i.test(phrase)
 }
 
 // Devuelve la acción a aplicar, o null si no se debe tocar el coche.
 export async function decide(classifier, phrase) {
+  if (isCancelled(phrase)) return { action: null, choice: 'continue', now: 0, p: 0, latencyMs: 0 }
   const { answers, latencyMs } = await classifier.classify({ state: `Player says: ${phrase}`, questions: QUESTIONS })
-  const a = answers.action
-  const accepted = a.confidence >= THRESHOLD && DRIVING_ACTIONS.includes(a.choice)
-  return { action: accepted ? a.choice : null, ...a, latencyMs }
+  const { now, action } = answers
+  const p = action.probabilities[action.choice]
+  return { action: now.noul >= THRESHOLD ? action.choice : null, choice: action.choice, now: now.noul, p, latencyMs }
 }
