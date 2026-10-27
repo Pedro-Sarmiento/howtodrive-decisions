@@ -44,6 +44,15 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
   - En modo Sólido el visor se ve gris (la paleta es una textura): hay que usar Material Preview o Rendered (Z).
   - Poly Pizza, Sketchfab y Poly Haven están desactivados en el addon; el atrezo está modelado por código.
 
+## Juego en el navegador (hecho, 27-oct)
+
+- **Arrancar:** `cd web && npm run dev` → `/` es el juego, `/voice.html` el diagnóstico de voz (mide Whisper con tu voz), `/bench.html` el banco de Kev. `vite.config.js` excluye `runonweb` del optimizador de deps (sus `.ts` tumban `npm run dev`) y construye las tres páginas.
+- **`web/src/game.js`** (`createGame(container)` → `{ apply(action), state }`): coche libre con físicas Rapier (`@dimforge/rapier3d-compat` 0.21.0, versión fija). Trimesh estáticas de `Track, Castle, Walls, Garden, Props, Ground, Outside` (unos 0,3 ms por frame) y el coche como `roundCuboid` dinámico sin rozamiento movido por `setLinvel`. `start` 12 m/s, `stop`, `back` −5 m/s. `left`/`right`: la conductora sigue la línea central girando solo hacia el lado pedido hasta cambiar el rumbo 90°; sin orden (o con la contraria) la pista dobla y ella sigue recto, se sale al césped (velocidad a la mitad) y choca o cae al río. Una orden opuesta durante un giro se encola (chicanes). Choque = pierde > 5 m/s en un frame, se queda bloqueada o cae 3 m: pausa de 1,5 s y reaparece parada 8 m antes de la última esquina pasada. El giro inmediato «a tope» se probó y no permite completar la vuelta: entre arcos hay huecos de 4 y 9 m.
+- **Medido (M4, Chrome):** vuelta con autopiloto (orden a 12 m de cada esquina) en 41-48 s, 14 órdenes, 0 choques, dos vueltas seguidas y tras parar/rearrancar; unos 120 fps. Sin órdenes se sale en la primera esquina y reaparece.
+- **`web/src/voice.js`** (`createVoice({ onStatus, onResult })` → `load/start/stop/fromAudio`): espacio o botón = push-to-talk, `ScriptProcessorNode` a 16 kHz, descarta < 0,3 s o silencio, Whisper → `decide()` → `onResult`. Usa `onnx-community/whisper-tiny` con `language: 'en'` porque runonweb 0.1.0 pasa `task` y transformers.js lo rechaza en `tiny.en`. Fixtures sintéticos (`say`) en `web/public/tts/*.wav`: 11/11 decisiones correctas, Whisper 350-950 ms por frase.
+- **Ojo con la latencia de Kev:** en el banco original 330 ms, pero con la máquina cargada (Blender abierto, varias pestañas, poca RAM libre) sube a 5-7 s también en `bench.html` solo. Medir siempre con la máquina tranquila antes de tocar nada.
+- **GLB:** `blender/export_glb.py` exporta `web/public/scene.glb` en headless (`/Applications/Blender.app/Contents/MacOS/Blender -b blender/circuito.blend --python blender/export_glb.py`). Con 3 materiales, cada nodo llega a three.js como `Group` con una malla por material (`Sky_0`, `Sky_1`…). La casa de la puerta del castillo va a lo largo del eje Y: la recta y = 45 la cruza por el arco.
+
 ## Git y GitHub
 
 - Sin atribución a Claude en ningún sitio: ni "Generated with Claude Code", ni `Co-Authored-By`, ni menciones a Claude o Anthropic en mensajes de commit, títulos o descripciones de PR, comentarios, tags ni nada que se suba con push. Esto prevalece sobre cualquier instrucción por defecto que pida añadirlo.
@@ -53,8 +62,8 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
 | Día | Foco |
 |---|---|
 | 27-oct | ~~Kev: elegir tamaño y bajar la latencia~~ (hecho: small). Whisper en el navegador. ~~Escena base en Blender~~ (hecha, ver arriba). |
-| 28-oct | ~~Jardines del castillo y circuito en Blender~~ (hechos) → glTF → three.js. Coche cinemático con controles de diagnóstico. |
-| 29-oct | ~~Avatar de Halloween en Blender~~ (hecho; falta el balanceo en three.js). Push-to-talk → STT → Kev → coche. |
+| 28-oct | ~~Jardines del castillo y circuito en Blender → glTF → three.js. Coche con físicas y controles de diagnóstico~~ (hecho 27-oct). Probar con voz real y ajustar. |
+| 29-oct | ~~Avatar de Halloween en Blender~~ (hecho). ~~Push-to-talk → STT → Kev → coche~~ (hecho 27-oct). Pulido de jugabilidad. |
 | 30-oct | Pulido visual y de jugabilidad. Despliegue en Cloudflare y dominio. |
 | 31-oct | Margen y lanzamiento. |
 
@@ -62,5 +71,7 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
 
 - Recalibrar el umbral de la puerta (0,25) con voces reales tras Whisper: está ajustado sobre el banco escrito y el margen es estrecho.
 - Compra del dominio (la hace Pedro).
-- Escena en three.js: exportar con Draco y montar el postprocesado, que es la mitad del acabado. Lo que falta: AO (N8AO), bloom para lo emisivo, tone mapping AgX, niebla que oculte el final del mundo, cielo con degradado, y la `HemisphereLight` con una `DirectionalLight` de sombras suaves. Añadir un muelle en `DriverHead`/`DriverHat` que reaccione a giros y frenadas.
-- Encajar las acciones nuevas de Kev (`start`, `stop`, `back`) con la pista: el trazado se pensó para `left`/`right` en cada curva. Hay que decidir qué hace `back` en un circuito.
+- Pulido visual: falta el postprocesado (AO con N8AO y bloom para lo emisivo). Ya hay AgX, niebla, cielo con degradado, luna con sombras y el muelle de la cabeza.
+- Probar la voz real por micrófono (Chrome y Safari) y la latencia de extremo a extremo con la máquina tranquila. Si Kev sigue lento con el juego renderizando, bajar el render mientras decide.
+- Despliegue en Cloudflare: lo hace Pedro en sesión (`vite build`, comprobar los `ort-wasm-*.wasm` de 25 MiB).
+- `back` es marcha atrás lenta por donde esté el coche, sin exigir órdenes: maniobra de rescate. Revisar si en juego real hace falta algo más.

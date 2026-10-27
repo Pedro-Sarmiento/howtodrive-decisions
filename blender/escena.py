@@ -540,15 +540,17 @@ def palettize(cell=4, cols=8):
             continue
         me, old = o.data, list(o.data.materials)
         uv = me.uv_layers.active or me.uv_layers.new(name="UVMap")
-        for poly in me.polygons:
-            m = old[min(poly.material_index, len(old) - 1)]
+        old_idx = [p.material_index for p in me.polygons]
+        # Primero los slots nuevos: materials.clear() pone a 0 el índice de todas las caras.
+        me.materials.clear()
+        for s in slots:
+            me.materials.append(s)
+        for poly, k in zip(me.polygons, old_idx):
+            m = old[min(k, len(old) - 1)]
             u, v = uv_of[m["hex"]]
             for li in poly.loop_indices:
                 uv.data[li].uv = (u, v)
             poly.material_index = kinds.index(m["kind"])
-        me.materials.clear()
-        for s in slots:
-            me.materials.append(s)
     for m in list(bpy.data.materials):
         if "hex" in m:
             bpy.data.materials.remove(m)
@@ -746,20 +748,20 @@ for z in (20, 26):
 box("WaterGate", (river_x_n, 60.9, 1.5), (9, 0.4, 3.0), C["Castle"], M["shadow"])
 cyl("WaterGateTop", (river_x_n, 60.9, 3.0), 4.5, 0.4, C["Castle"], M["shadow"], rot=(math.pi / 2, 0, 0), verts=32)
 
-# Puerta: arco real por el que pasa la pista
+# Puerta: arco real por el que pasa la pista. La recta y = 45 la cruza de oeste a este, así que
+# la casa de la puerta va a lo largo del eje Y y la abertura (13 m, la calzada mide 8) mira a la pista.
 gx, gy = GATE.x, GATE.y
-gate = box("GateArch", (gx, gy, 9), (24, 6, 18), C["Castle"], M["stone"])
-carve(gate, box("GateCut", (gx, gy, 3.0), (13, 8, 7), C["Cutters"], M["stone_dark"], bevel=False))
-carve(gate, cyl("GateCutTop", (gx, gy, 6.5), 6.5, 8, C["Cutters"], M["stone_dark"], rot=(math.pi / 2, 0, 0), verts=32))
-merlons((gx - 12, gy - 2.5), (gx + 12, gy - 2.5), 18, C["Castle"])
-merlons((gx - 12, gy + 2.5), (gx + 12, gy + 2.5), 18, C["Castle"])
+gate = box("GateArch", (gx, gy, 9), (6, 24, 18), C["Castle"], M["stone"])
+carve(gate, box("GateCut", (gx, gy, 3.0), (8, 13, 7), C["Cutters"], M["stone_dark"], bevel=False))
+carve(gate, cyl("GateCutTop", (gx, gy, 6.5), 6.5, 8, C["Cutters"], M["stone_dark"], rot=(0, math.pi / 2, 0), verts=32))
+merlons((gx - 2.5, gy - 12), (gx - 2.5, gy + 12), 18, C["Castle"])
+merlons((gx + 2.5, gy - 12), (gx + 2.5, gy + 12), 18, C["Castle"])
 for s in (-1, 1):
-    tower(f"GateTower{s}", gx + s * 13.5, gy, 4.2, 24, C["Castle"], windows=2)
-    box(f"GateWall{s}", (gx + s * 13.5, (gy + 3 + Y1) / 2, WH / 2), (2.5, Y1 - gy - 3, WH), C["Castle"], M["stone"])
-    banner(Vector((gx + s * 13.5, gy - 4.2, 0)), Vector((0, -1, 0)), 12, C["Castle"])
-    torch(Vector((gx + s * 8, gy - 3, 0)), Vector((0, -1, 0)), 6.0, C["Castle"])
-    torch(Vector((gx + s * 8, gy + 3, 0)), Vector((0, 1, 0)), 6.0, C["Castle"])
-    pumpkin("GatePumpkin", (gx + s * 9.5, gy - 6.5, 0.9), 1.1, C["Castle"], carved=True, face=math.pi)
+    tower(f"GateTower{s}", gx, gy + s * 13.5, 4.2, 24, C["Castle"], windows=2)
+    banner(Vector((gx - 4.2, gy + s * 13.5, 0)), Vector((-1, 0, 0)), 12, C["Castle"])
+    torch(Vector((gx - 3, gy + s * 8, 0)), Vector((-1, 0, 0)), 6.0, C["Castle"])
+    torch(Vector((gx + 3, gy + s * 8, 0)), Vector((1, 0, 0)), 6.0, C["Castle"])
+    pumpkin("GatePumpkin", (gx - 6.5, gy + s * 9.5, 0.9), 1.1, C["Castle"], carved=True, face=math.pi / 2)
 taken += [(gx, gy, 16)]
 
 # ---------- jardín ----------
