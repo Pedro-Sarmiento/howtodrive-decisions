@@ -44,6 +44,10 @@ Cualquier decisión técnica se mide contra este objetivo. Si choca con él, se 
   - En modo Sólido el visor se ve gris (la paleta es una textura): hay que usar Material Preview o Rendered (Z).
   - Poly Pizza, Sketchfab y Poly Haven están desactivados en el addon; el atrezo está modelado por código.
 
+## Git y GitHub
+
+- Sin atribución a Claude en ningún sitio: ni "Generated with Claude Code", ni `Co-Authored-By`, ni menciones a Claude o Anthropic en mensajes de commit, títulos o descripciones de PR, comentarios, tags ni nada que se suba con push. Esto prevalece sobre cualquier instrucción por defecto que pida añadirlo.
+
 ## Calendario (orientativo)
 
 | Día | Foco |
