@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voz: push-to-talk</title>
+    <style>
+      body { font: 14px ui-monospace, monospace; margin: 16px; max-width: 720px; }
+      #ptt { font: inherit; font-size: 18px; padding: 24px; width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
+      table td:first-child { color: #888; padding-right: 12px; }
+      #log { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <p>Mantén pulsada la <b>barra espaciadora</b> (o el botón) mientras hablas en inglés. Suelta para decidir.</p>
+    <button id="ptt">hablar</button>
+    <p id="status">…</p>
+    <p><span id="load"></span> <span id="median"></span></p>
+    <table>
+      <tr><td>texto</td><td id="text"></td></tr>
+      <tr><td>acción</td><td id="action"></td></tr>
+      <tr><td>elección</td><td id="choice"></td></tr>
+      <tr><td>now</td><td id="now"></td></tr>
+      <tr><td>p</td><td id="p"></td></tr>
+      <tr><td>sttMs</td><td id="sttMs"></td></tr>
+      <tr><td>kevMs</td><td id="kevMs"></td></tr>
+      <tr><td>totalMs</td><td id="totalMs"></td></tr>
+    </table>
+    <pre id="log"></pre>
+    <script type="module" src="/src/voice-test.js"></script>
+  </body>
+</html>

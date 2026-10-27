@@ -4,6 +4,12 @@ import bpy, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(os.path.join(HERE, "..", "web", "public", "scene.glb"))
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
+# El .blend guarda la paleta con una ruta absoluta de otro worktree: sin esto el exportador
+# no encuentra la imagen y el GLB sale con un solo material sin textura ni emisión.
+for img in bpy.data.images:
+    if img.name == "Palette":
+        img.filepath = os.path.join(HERE, "palette.png")
+        img.reload()
 # Las luces de las farolas solo sirven para previsualizar en Blender.
 for o in list(bpy.data.objects):
     if o.type in ("LIGHT", "CAMERA"):

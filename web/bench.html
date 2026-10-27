@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kev bench</title>
+    <style>
+      body { font: 14px ui-monospace, monospace; margin: 16px; }
+      pre { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <button data-size="small">Kev small (0.8B, ~750 MB)</button>
+    <button data-size="large">Kev large (4B, ~2.7 GB)</button>
+    <span id="status"></span>
+    <pre id="out"></pre>
+    <script type="module" src="/src/bench.js"></script>
+  </body>
+</html>
