@@ -7,7 +7,12 @@
 //   3. una elección entre las 5 acciones, sin cajón de sastre.
 // 2 y 3 van en la misma llamada: el estado se lee una vez.
 
-export const THRESHOLD = 0.25 // ponytail: ajustado sobre el banco (positivos ≥ 0.20, negativos ≤ 0.28), recalibrar con voces reales
+// Umbral único de la puerta, a propósito. Medido en el banco (68 frases):
+//   left/right/back: órdenes ≥ 0.35 y ninguna frase nula llega (la regla las corta) → cualquier umbral sirve.
+//   start: órdenes 0.20–0.47, charla 0.15–0.24 → bajar a 0.20 por "let's go" deja pasar 3 frases nulas.
+//   stop:  órdenes 0.28–0.56, "oh no" 0.28 → subir a 0.29 pierde "freeze".
+// Umbrales por acción solo moverían el fallo de sitio. ponytail: recalibrar con voces reales y Whisper.
+export const THRESHOLD = 0.25
 
 export const DRIVING_ACTIONS = ['start', 'stop', 'left', 'right', 'back']
 
@@ -43,8 +48,9 @@ export function isCancelled(phrase) {
 
 // Devuelve la acción a aplicar, o null si no se debe tocar el coche.
 export async function decide(classifier, phrase) {
-  if (isCancelled(phrase)) return { action: null, choice: 'continue', now: 0, latencyMs: 0 }
+  if (isCancelled(phrase)) return { action: null, choice: 'continue', now: 0, p: 0, latencyMs: 0 }
   const { answers, latencyMs } = await classifier.classify({ state: `Player says: ${phrase}`, questions: QUESTIONS })
   const { now, action } = answers
-  return { action: now.noul >= THRESHOLD ? action.choice : null, choice: action.choice, now: now.noul, latencyMs }
+  const p = action.probabilities[action.choice]
+  return { action: now.noul >= THRESHOLD ? action.choice : null, choice: action.choice, now: now.noul, p, latencyMs }
 }

@@ -81,7 +81,7 @@ async function pass(classifier, name, cases) {
     const hit = r.action === expected
     ok += hit
     if (r.latencyMs) times.push(r.latencyMs)
-    log(`${hit ? '✅' : '❌'} ${phrase.padEnd(28)} ${String(r.action).padEnd(6)} now=${r.now.toFixed(2)} ${r.choice.padEnd(8)} ${String(r.latencyMs).padStart(4)}ms`)
+    log(`${hit ? '✅' : '❌'} ${phrase.padEnd(28)} ${String(r.action).padEnd(6)} now=${r.now.toFixed(2)} ${r.choice.padEnd(8)} p=${r.p.toFixed(2)} ${String(r.latencyMs).padStart(4)}ms`)
   }
   times.sort((a, b) => a - b)
   const summary = { ok, total: cases.length, medianMs: times[times.length >> 1], maxMs: times.at(-1) }
