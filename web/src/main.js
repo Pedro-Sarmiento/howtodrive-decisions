@@ -5,9 +5,6 @@ const game = await createGame(document.getElementById('app'));
 window.game = game;
 
 const KEYS = { KeyG: 'start', KeyS: 'stop', KeyA: 'left', KeyD: 'right', KeyB: 'back' };
-addEventListener('keydown', event => {
-  if (!event.repeat && KEYS[event.code]) game.apply(KEYS[event.code]);
-});
 
 const elements = Object.fromEntries(
   ['voice', 'transcript', 'decision', 'probability', 'confidence', 'gate', 'load']
@@ -39,7 +36,6 @@ const voice = createVoice({
     elements.confidence.value = 0;
   },
   onResult: result => {
-    elements.transcript.textContent = `«${result.text}»`;
     elements.decision.textContent = result.action ?? 'Sin cambio';
     const filtered = result.choice === 'continue';
     elements.probability.textContent = filtered ? 'No aplica' : percent(result.p);
@@ -60,7 +56,9 @@ elements.load.addEventListener('click', async () => {
   }
 });
 addEventListener('keydown', event => {
-  if (event.code === 'Space' && !event.repeat) {
+  if (event.repeat) return;
+  if (KEYS[event.code]) game.apply(KEYS[event.code]);
+  if (event.code === 'Space') {
     event.preventDefault();
     voice.start();
   }

@@ -6,8 +6,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 
-const FWD_SPEED = 7, BACK_SPEED = 4, ACCEL = 3, BRAKE = 8;   // m/s and m/s²
-// Follow the requested turn along the centerline; immediate full-lock steering misses narrow arches.
+const FWD_SPEED = 7, BACK_SPEED = 4, ACCEL = 3, BRAKE = 8;   // m/s y m/s²; con Kev a varios segundos, 12 m/s era injugable
+// Giro: con `left`/`right` la conductora sigue la línea central hacia el lado pedido hasta cambiar
+// el rumbo 90°. El giro inmediato a tope no completa la vuelta: entre arcos hay huecos de 4 y 9 m.
 const TURN_RADIUS = 6, LOOKAHEAD = 6, STEER_GAIN = 3, TURN_DONE = THREE.MathUtils.degToRad(80);
 const CRASH_DV = 5, CRASH_DROP = 3, CRASH_RESET_MS = 1500;
 const WHEEL_R = 0.46;

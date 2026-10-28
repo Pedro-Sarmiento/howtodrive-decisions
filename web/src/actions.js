@@ -1,7 +1,13 @@
+// Órdenes con Kev (runonweb/classify). Kev elige bien *qué* acción, pero confunde negaciones y
+// órdenes diferidas con la acción que nombran. Por eso: regla léxica → continue sin llamar a Kev;
+// luego, en una sola llamada, puerta sí/no («¿orden para ahora?») y elección entre 5 acciones.
+// No hay opción `continue`: con ella Kev small acertaba 13/38.
+
+// Umbral único, medido en el banco: bajarlo a 0,20 deja pasar charla como `start`; subirlo a 0,29
+// pierde «freeze». ponytail: recalibrar con voces reales tras Whisper.
 export const THRESHOLD = 0.25
 
-export const DRIVING_ACTIONS = ['start', 'stop', 'left', 'right', 'back']
-
+// Ejemplos literales: sin ellos Kev small baja de 29/38 a 20/38.
 const CRITERIA = {
   start: "Start driving or move forward (e.g. 'start', 'go', \"let's go\", 'drive').",
   stop: "Stop or brake (e.g. 'stop', 'brake', 'halt', 'wait').",
@@ -26,7 +32,7 @@ const QUESTIONS = {
   },
 }
 
-export function isCancelled(phrase) {
+function isCancelled(phrase) {
   return /\b(don'?t|do not|never|after|later|at the|when|once|until|before)\b/i.test(phrase)
 }
 

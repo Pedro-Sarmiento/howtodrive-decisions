@@ -63,8 +63,7 @@ export function createVoice({ onStatus = () => {}, onResult = () => {}, onTransc
     if (!ready || recording || busy) return
     if (!stream) return onStatus('sin micrófono')
     if (!ctx) {
-      // Safari puede ignorar
-      // el sampleRate pedido: se remuestrea al parar si hace falta.
+      // Safari puede ignorar el sampleRate pedido: se remuestrea al parar si hace falta.
       try { ctx = new AudioContext({ sampleRate: RATE }) } catch { ctx = new AudioContext() }
       const proc = ctx.createScriptProcessor(1024, 1, 1)
       proc.onaudioprocess = (e) => recording && chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)))

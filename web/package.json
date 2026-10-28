@@ -2,7 +2,6 @@
   "name": "web",
   "version": "1.0.0",
   "description": "Browser-only Halloween driving experiment with Whisper and Kev",
-  "main": "index.js",
   "scripts": {
     "test": "node --test src/*.test.js",
     "dev": "vite",
