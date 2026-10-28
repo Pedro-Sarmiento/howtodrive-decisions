@@ -1,10 +1,10 @@
 {
   "name": "web",
   "version": "1.0.0",
-  "description": "",
+  "description": "Browser-only Halloween driving experiment with Whisper and Kev",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test src/*.test.js",
     "dev": "vite",
     "build": "vite build"
   },
@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "type": "module",
-  "private": "true",
+  "private": true,
   "dependencies": {
     "@dimforge/rapier3d-compat": "0.21.0",
     "runonweb": "0.1.0",

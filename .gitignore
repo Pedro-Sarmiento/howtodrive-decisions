@@ -1,4 +1,16 @@
 __pycache__/
-node_modules/
+node_modules
 dist/
 *.blend1
+.DS_Store
+.env
+.env.*
+*.log
+
+# Local only: references, agent notes and drafts
+assets/
+.claude/
+AGENTS.md
+CLAUDE.md
+plan-juego-conduccion.md
+docs/linkedin.md
