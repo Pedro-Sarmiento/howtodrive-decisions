@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 
-const FWD_SPEED = 12, BACK_SPEED = 5, ACCEL = 4, BRAKE = 8;
+const FWD_SPEED = 7, BACK_SPEED = 4, ACCEL = 3, BRAKE = 8;   // m/s y m/s²; con Kev a varios segundos, 12 m/s era injugable
 // Giro: al recibir `left`/`right` la conductora sigue la línea central (persecución de un punto
 // LOOKAHEAD m por delante) girando solo hacia el lado pedido, con radio mínimo TURN_RADIUS, hasta
 // haber cambiado el rumbo 90°. Sin orden (o con la contraria) la pista se dobla y ella sigue
