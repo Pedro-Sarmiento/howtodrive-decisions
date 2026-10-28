@@ -1,22 +1,7 @@
-// Interpretación de órdenes con Kev (runonweb/classify, mismo esquema que /v1/systemone).
-//
-// Kev-0.8B elige bien *cuál* acción (47/47 en órdenes reales) pero no sabe si *hay* orden:
-// negaciones y órdenes para luego las confunde con la acción que nombran. Así que:
-//   1. regla léxica para negación/diferido → continue sin llamar a Kev,
-//   2. una pregunta sí/no "¿orden para ahora?" (puerta),
-//   3. una elección entre las 5 acciones, sin cajón de sastre.
-// 2 y 3 van en la misma llamada: el estado se lee una vez.
-
-// Umbral único de la puerta, a propósito. Medido en el banco (68 frases):
-//   left/right/back: órdenes ≥ 0.35 y ninguna frase nula llega (la regla las corta) → cualquier umbral sirve.
-//   start: órdenes 0.20–0.47, charla 0.15–0.24 → bajar a 0.20 por "let's go" deja pasar 3 frases nulas.
-//   stop:  órdenes 0.28–0.56, "oh no" 0.28 → subir a 0.29 pierde "freeze".
-// Umbrales por acción solo moverían el fallo de sitio. ponytail: recalibrar con voces reales y Whisper.
 export const THRESHOLD = 0.25
 
 export const DRIVING_ACTIONS = ['start', 'stop', 'left', 'right', 'back']
 
-// Ejemplos literales: sin ellos Kev-0.8B baja de 29/38 a 20/38.
 const CRITERIA = {
   start: "Start driving or move forward (e.g. 'start', 'go', \"let's go\", 'drive').",
   stop: "Stop or brake (e.g. 'stop', 'brake', 'halt', 'wait').",
@@ -41,12 +26,10 @@ const QUESTIONS = {
   },
 }
 
-// Negación u orden diferida: Kev-0.8B no las distingue, una regla sí.
 export function isCancelled(phrase) {
   return /\b(don'?t|do not|never|after|later|at the|when|once|until|before)\b/i.test(phrase)
 }
 
-// Devuelve la acción a aplicar, o null si no se debe tocar el coche.
 export async function decide(classifier, phrase) {
   if (isCancelled(phrase)) return { action: null, choice: 'continue', now: 0, p: 0, latencyMs: 0 }
   const { answers, latencyMs } = await classifier.classify({ state: `Player says: ${phrase}`, questions: QUESTIONS })

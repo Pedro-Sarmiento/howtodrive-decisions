@@ -2,3 +2,10 @@ __pycache__/
 node_modules/
 dist/
 *.blend1
+
+assets/
+.claude/
+.DS_Store
+.env
+.env.*
+*.log

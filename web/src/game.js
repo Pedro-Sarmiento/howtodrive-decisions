@@ -6,13 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 
-const FWD_SPEED = 7, BACK_SPEED = 4, ACCEL = 3, BRAKE = 8;   // m/s y m/s²; con Kev a varios segundos, 12 m/s era injugable
-// Giro: al recibir `left`/`right` la conductora sigue la línea central (persecución de un punto
-// LOOKAHEAD m por delante) girando solo hacia el lado pedido, con radio mínimo TURN_RADIUS, hasta
-// haber cambiado el rumbo 90°. Sin orden (o con la contraria) la pista se dobla y ella sigue
-// recto. Nota: el giro inmediato a tope (sin seguir la línea) se simuló sobre esta pista y no
-// permite completar una vuelta con órdenes a ~11 m de la esquina (arcos de 12 m con huecos de
-// solo 4 y 9 m entre ellos); solo funcionaba con órdenes 3-6 m antes (0,3-0,5 s a 12 m/s).
+const FWD_SPEED = 7, BACK_SPEED = 4, ACCEL = 3, BRAKE = 8;   // m/s and m/s²
+// Follow the requested turn along the centerline; immediate full-lock steering misses narrow arches.
 const TURN_RADIUS = 6, LOOKAHEAD = 6, STEER_GAIN = 3, TURN_DONE = THREE.MathUtils.degToRad(80);
 const CRASH_DV = 5, CRASH_DROP = 3, CRASH_RESET_MS = 1500;
 const WHEEL_R = 0.46;

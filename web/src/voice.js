@@ -10,7 +10,7 @@ const MIN_RMS = 0.005 // por debajo, silencio (una voz normal da 0,02–0,1)
 
 const mb = (n) => `${Math.round(n / 1e6)} MB`
 
-export function createVoice({ onStatus = () => {}, onResult = () => {} } = {}) {
+export function createVoice({ onStatus = () => {}, onResult = () => {}, onTranscript = () => {} } = {}) {
   let stt, kev, stream, ctx, chunks = []
   let ready = false, recording = false, busy = false
 
@@ -55,15 +55,15 @@ export function createVoice({ onStatus = () => {}, onResult = () => {} } = {}) {
       throw e
     }
     ready = true
-    onStatus(`listo · Whisper ${stt.device} · Kev ${kev.device}`)
     await mic
+    onStatus(stream ? `listo · Whisper ${stt.device} · Kev ${kev.device}` : 'sin micrófono: permiso no disponible')
   }
 
   function start() {
     if (!ready || recording || busy) return
     if (!stream) return onStatus('sin micrófono')
     if (!ctx) {
-      // ScriptProcessorNode: obsoleto pero son 5 líneas y va en Chrome y Safari. Safari puede ignorar
+      // Safari puede ignorar
       // el sampleRate pedido: se remuestrea al parar si hace falta.
       try { ctx = new AudioContext({ sampleRate: RATE }) } catch { ctx = new AudioContext() }
       const proc = ctx.createScriptProcessor(1024, 1, 1)
@@ -102,6 +102,7 @@ export function createVoice({ onStatus = () => {}, onResult = () => {} } = {}) {
     const sttMs = Math.round(performance.now() - t0)
     const text = clean(raw)
     if (!text) return onStatus(`nada que entender (${JSON.stringify(raw)}, ${sttMs} ms)`)
+    onTranscript(text)
     onStatus(`«${text}» → Kev…`)
     const r = await decide(kev, text)
     const totalMs = Math.round(performance.now() - t0)
