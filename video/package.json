@@ -1,0 +1,15 @@
+{
+  "name": "howtodrive-explainer",
+  "private": true,
+  "scripts": {
+    "preview": "remotion studio index.jsx --public-dir=../docs/media",
+    "render": "remotion render index.jsx HowToDrive ../docs/media/howtodrive-explained.mp4 --public-dir=../docs/media --concurrency=2 --muted"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "@remotion/media": "4.0.539",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.539"
+  }
+}

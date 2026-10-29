@@ -1,6 +1,7 @@
 # Material para la publicación
 
 - `halloween-circuit.png`: render de la escena real de Blender.
+- `howtodrive-explained.mp4`: montaje explicativo de Remotion, con rótulos y sin audio. Es el vídeo enlazado desde el README.
 - `demo.mp4`: captura del juego con audio sintético de prueba procesado por Whisper y Kev. No contiene pista de audio. Las transcripciones, decisiones y probabilidades proceden de inferencia real; no están simuladas.
 - `demo-panel.png`: fotograma del panel al terminar la prueba.
 
