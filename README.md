@@ -1,6 +1,6 @@
 # How to Drive 🎃
 
-Un experimento de conducción por voz con modelos de decisiones en el navegador. Eres el copiloto: das indicaciones en inglés y una conductora de Halloween las ejecuta en un circuito creado en Blender.
+Un experimento de conducción por voz con modelos de decisiones en el navegador.Das indicaciones en inglés y una conductora las ejecuta en un circuito creado en Blender. Ambientado en Halloween por la época del año en la que estamos.
 
 ![Circuito de Halloween](docs/media/halloween-circuit.png)
 
@@ -8,7 +8,7 @@ Un experimento de conducción por voz con modelos de decisiones en el navegador.
 
 [![Ver el vídeo explicativo sin audio](docs/media/demo-panel.png)](docs/media/howtodrive-explained.mp4)
 
-Vídeo de 32 segundos con rótulos en español: voz → transcripción → decisión → movimiento. La captura utiliza audios sintéticos de prueba y resultados reales del modelo. [Descargar MP4](docs/media/howtodrive-explained.mp4) · [Composición de Remotion](video/)
+La captura utiliza audios sintéticos de prueba y resultados reales del modelo. [Descargar MP4](docs/media/howtodrive-explained.mp4) · [Composición de Remotion](video/)
 
 ## Por qué existe
 
@@ -16,7 +16,7 @@ La curiosidad por Jev de TypeSafe y Kev, junto con una noticia sobre los costes 
 
 ## Ejecutar
 
-Requiere Node.js 22.12+ y un navegador moderno; las pruebas del proyecto se hicieron en Chrome sobre un Mac M4 con WebGPU.
+Requiere Node.js 22.12. Las pruebas del proyecto se hicieron en Chrome sobre un Mac M4 con WebGPU.
 
 ```sh
 cd web
@@ -24,7 +24,7 @@ npm ci
 npm run dev
 ```
 
-Abre la URL de Vite y pulsa **Activar voz**. La primera carga descarga los modelos (aproximadamente 750 MB para Kev small y 155 MB para Whisper en WebGPU). Hace falta conexión para descargar pesos y recursos; el procesamiento posterior ocurre en el navegador. El micrófono requiere localhost o HTTPS.
+Abre la URL de Vite y pulsa **Activar voz**. La primera carga descarga los modelos (aproximadamente 750 MB para Kev small y 155 MB para Whisper en WebGPU). Hace falta conexión para descargar pesos y recursos; el procesamiento posterior ocurre en el navegador.
 
 Tras activar la voz, mantén pulsado espacio para hablar: `start`, `stop`, `turn left`, `turn right`, `reverse`. También puedes probar con G/S/A/D/B. El panel derecho muestra la transcripción, la acción y sus probabilidades.
 
@@ -38,7 +38,6 @@ Tras activar la voz, mantén pulsado espacio para hablar: `start`, `stop`, `turn
 
 Los modelos se integran mediante [RunOnWeb](https://runonweb.ai/), la librería de [midudev](https://github.com/midudev/runonweb.ai), usando `runonweb/stt` y `runonweb/classify`. RunOnWeb descarga los pesos desde Hugging Face; no se incluyen en este repositorio ni requieren una API de inferencia propia.
 
-La probabilidad de la acción y la de «orden inmediata» son salidas distintas. No garantizan que la interpretación sea correcta. Cuando se aplica el filtro léxico no se consulta Kev y el panel muestra «No aplica».
 
 ## Validación y límites
 
@@ -50,9 +49,9 @@ npm run build
 
 `/bench.html` contiene el banco de clasificación; `/voice.html`, el diagnóstico de voz. Los audios sintéticos de `web/public/tts/` permiten repetir pruebas. Las frases reservadas no deben convertirse en ejemplos del clasificador.
 
-Las mediciones anteriores registran 66/68 frases correctas y unos 330 ms de mediana para Kev en Chrome/M4. Incluyen frases de desarrollo y reservadas, y no representan precisión general ni latencia completa de voz. Faltan pruebas con más voces y equipos. La descarga inicial es grande y el rendimiento varía según navegador.
+Las mediciones anteriores registran 66/68 frases correctas y unos 330 ms de media para Kev en Chrome/M4. Incluyen frases de desarrollo y reservadas, y no representan precisión general ni latencia completa de voz.
 
-El build produce `web/dist/`. Algunos WASM superan 25 MiB: revisa los límites de tu alojamiento antes de desplegar.
+El build produce `web/dist/`. Algunos WASM superan 25 MiB.
 
 ## Estructura
 
